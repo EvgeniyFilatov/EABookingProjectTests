@@ -15,7 +15,7 @@ class APIClient:
 
         self.base_url = self.get_base_url(environment)
         self.headers = {
-            'Content-Type': 'application/json   '
+            'Content-Type': 'application/json'
         }
 
     def get_base_url(self, environment: Environment) -> str:
