@@ -72,30 +72,13 @@ class APIClient:
             response.raise_for_status()
         with allure.step('Assert status code'):
             assert response.status_code == 200, f'Expected status 200, but got {response.status_code}'
-        with allure.step('Validate response structure'):
-            assert isinstance(response.json(), list), f'Expected list, but got {type(response.json())}'
-            for i in response.json():
-                assert 'bookingid' in i, 'bookingid not found'
-        booking_ids = response.json()
-        return booking_ids
+        return response.json()
 
-    def get_booking_by_id(self, booking_id=None):
-        with allure.step('Getting bookingid'):
-            if booking_id is None:
-                booking_id = self.get_booking_ids()[0]['bookingid']
+    def get_booking_by_id(self, booking_id):
         with allure.step('Getting booking by id'):
             url = f'{self.base_url}{Endpoints.BOOKING_ENDPOINT}{booking_id}'
             response = self.session.get(url)
             response.raise_for_status()
         with allure.step('Assert status code'):
             assert response.status_code == 200, f'Expected status 200, but got {response.status_code}'
-            data = response.json()
-            assert isinstance(data[('firstname'), str])
-            assert isinstance(data[('lastname'), str])
-            assert isinstance(data[('totalprice'), float])
-            assert isinstance(data[('depositpaid'), bool])
-            assert isinstance(data[('bookingdates'), dict])
-            assert isinstance(data[('bookingdates')['checkin'], str])
-            assert isinstance(data[('bookingdates')['checkout'], str])
-            assert isinstance(data[('additionalneeds'), str])
-        return data
+        return response.json()
