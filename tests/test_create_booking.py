@@ -121,7 +121,7 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
     # Test with empty field 'bookingdates'
             (
                 {
-                    "firstname": None,
+                    "firstname": "Jim",
                     "lastname": "Brown",
                     "totalprice": 111,
                     "depositpaid": True,
