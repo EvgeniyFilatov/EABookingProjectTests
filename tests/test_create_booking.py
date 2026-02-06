@@ -1,5 +1,6 @@
 import allure
 import pytest
+import requests
 from pydantic import ValidationError
 from core.models.booking import BookingResponse
 
@@ -133,6 +134,9 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
     ])
 def test_create_booking_negative(api_client, booking_data, expected_status):
     with allure.step('Create booking request with invalid data'):
-        response = api_client.create_booking(booking_data)
+        with pytest.raises(requests.exceptions.HTTPError) as e:
+            api_client.create_booking(booking_data)
+
     with allure.step('Checking the status code'):
-        assert response.status_code == expected_status, f'Expected status {expected_status}, but got {response.status_code}'
+        actual_status = e.value.response.status_code
+        assert actual_status == expected_status, f'Expected status {expected_status}, but got {actual_status}'
