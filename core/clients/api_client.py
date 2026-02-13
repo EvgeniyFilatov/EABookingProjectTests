@@ -33,19 +33,6 @@ class APIClient:
         else:
             raise ValueError(f'Unsupported environment: {environment}')
 
-    def get(self, endpoint, params=None, status_code=200):
-        url = self.base_url + endpoint
-        response = requests.get(url, headers=self.session.headers, params=params)
-        if status_code:
-            assert response.status_code == status_code
-        return response.json()
-
-    def post(self, endpoint, data=None, status_code=200):
-        url = self.base_url + endpoint
-        response = requests.post(url, headers=self.session.headers, json=data)
-        if status_code:
-            assert response.status_code == status_code
-        return response.json()
 
     def ping(self):
         with allure.step('Ping api client'):
