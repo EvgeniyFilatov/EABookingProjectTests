@@ -1,43 +1,50 @@
+'''Тесты для создания бронирований.'''
+
 import allure
 import pytest
 import requests
 from pydantic import ValidationError
-from core.models.booking import BookingResponse
+from core.models.booking import BookingResponse, Booking
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-@allure.feature('Test create booking')
-@allure.story('Positive. Test create booking')
+@allure.feature('Create booking')
+@allure.story('Positive: Create booking with valid data')
 def test_create_booking_positive(api_client, generate_random_booking_data):
+    '''Позитивный тест создания бронирования.'''
     booking_data = generate_random_booking_data
-    with allure.step('Create booking request with valid data'):
+    logger.info("=" * 50)
+    logger.info("✅ ТЕСТ: Создание бронирования (позитивный)")
+    logger.info("=" * 50)
+
+    with allure.step('1. Отправка запроса на создание'):
+        logger.info("📤 Отправка запроса...")
         response = api_client.create_booking(booking_data)
-    with allure.step('Checking the status code and parameters in the response'):
-        assert response.status_code == 200, f'Expected status 200, but got {response.status_code}'
 
-        response_data = response.json()
-        assert isinstance(response_data['bookingid'], int)
-        assert isinstance(response_data['booking'], dict)
+    with allure.step('2. Проверка статуса ответа'):
+        assert response.status_code == 200, f'❌ Получили {response.status_code}, ожидали 200'
+        logger.info(f"✅ Статус корректный: {response.status_code}")
 
+    with allure.step('3. Проверка структуры ответа'):
         try:
-            BookingResponse(**response_data)
+            response_model = BookingResponse(**response.json())
+            logger.info(f"✅ ID бронирования: {response_model.bookingid}")
         except ValidationError as e:
-            raise ValidationError(f'Response validation failed {e}')
+            logger.error(f"❌ Ошибка валидации: {e}")
+            pytest.fail(f'Ответ не соответствует модели: {e}')
 
-        assert 'bookingid' in response_data
-        assert 'booking' in response_data
+    with allure.step('4. Проверяем данные'):
+        expected_booking = Booking(**booking_data)
+        assert response_model.booking == expected_booking
+        logger.info("✅ Все данные совпадают")
 
-        assert response_data['booking']['firstname'] == booking_data['firstname']
-        assert response_data['booking']['lastname'] == booking_data['lastname']
-        assert response_data['booking']['totalprice'] == booking_data['totalprice']
-        assert response_data['booking']['depositpaid'] == booking_data['depositpaid']
-        assert response_data['booking']['bookingdates']['checkin'] == booking_data['bookingdates']['checkin']
-        assert response_data['booking']['bookingdates']['checkout'] == booking_data['bookingdates']['checkout']
-        assert response_data['booking']['additionalneeds'] == booking_data['additionalneeds']
 
-@allure.feature('Test create booking')
-@allure.story('Negative. Test create booking')
+@allure.feature('Create booking')
+@allure.story('Negative: Create booking with invalid data')
 @pytest.mark.parametrize('booking_data, expected_status', [
-    # Test without required field 'firstname'
+    # Тест 1: нет firstname
     (
             {
                 "lastname" : "Brown",
@@ -51,7 +58,7 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
             },
             500
     ),
-    # Test without required field 'lastname'
+    # Тест 2: нет lastname
     (
             {
                 "firstname": "Jim",
@@ -65,7 +72,7 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
             },
             500
     ),
-    # Test without required field 'totalprice'
+    # Тест 3: нет totalprice
     (
             {
                 "firstname": "Jim",
@@ -79,7 +86,7 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
             },
             500
     ),
-    # Test without required field 'depositpaid'
+    # Тест 4: нет depositpaid
         (
             {
                 "firstname": "Jim",
@@ -93,7 +100,7 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
             },
             500
     ),
-    # Test without required field 'bookingdates'
+    # Тест 5: нет bookingdates
         (
             {
                 "firstname": "Jim",
@@ -104,7 +111,7 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
             },
             500
     ),
-    # Test with None in required field 'firstname'
+    # Тест 6: firstname = None
             (
                 {
                     "firstname": None,
@@ -119,7 +126,7 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
                 },
                 500
     ),
-    # Test with empty field 'bookingdates'
+    # Тест 7: пустой bookingdates
             (
                 {
                     "firstname": "Jim",
@@ -133,10 +140,20 @@ def test_create_booking_positive(api_client, generate_random_booking_data):
     )
     ])
 def test_create_booking_negative(api_client, booking_data, expected_status):
-    with allure.step('Create booking request with invalid data'):
+    '''Негативные тесты создания бронирования.'''
+    logger.info("=" * 50)
+    logger.info(f"❌ ТЕСТ: Создание бронирования (негативный)")
+    logger.info("=" * 50)
+
+    with allure.step('1. Отправка запроса с невалидными данными'):
+        # Ожидаем, что запрос вызовет ошибку
         with pytest.raises(requests.exceptions.HTTPError) as e:
             api_client.create_booking(booking_data)
 
-    with allure.step('Checking the status code'):
-        actual_status = e.value.response.status_code
-        assert actual_status == expected_status, f'Expected status {expected_status}, but got {actual_status}'
+        error_response = e.value.response
+        logger.debug(f"Получен статус: {error_response.status_code}")
+
+    with allure.step('2. Проверка статуса ответа'):
+        actual_status = error_response.status_code
+        assert actual_status == expected_status, f'❌ Получили {actual_status}, ожидали {expected_status}'
+        logger.info(f"✅ Статус ошибки корректный: {actual_status}")
