@@ -1,19 +1,66 @@
+'''Главный конфигурационный файл pytest.
+Содержит все фикстуры и настройки для тестов.'''
+
 import pytest
+import logging
+import sys
 from datetime import datetime, timedelta
 from faker import Faker
 
 from core.clients.api_client import APIClient
 
 
+# ========== ПРОСТЕЙШЕЕ ЛОГИРОВАНИЕ (3 строки) ==========
+# logging - встроенная библиотека Python, ничего устанавливать не нужно
+# basicConfig - базовая настройка логирования
+# level=logging.INFO - показывать информационные сообщения и выше (WARNING, ERROR)
+#                    - если поставить DEBUG, будет показывать ВСЁ
+# format - как будут выглядеть логи: время | сообщение
+# handlers - куда выводить логи (в консоль)
+logging.basicConfig(
+    level=logging.INFO,  # Для отладки меняйте на logging.DEBUG
+    format='%(asctime)s | %(name)-25s | %(levelname)-8s | %(message)s',  # Простой формат: время | имя модуля.
+    # Цифра -25 означает, что под имя резервируется 25 символов, а текст будет выровнен по левому краю | Текстовое название
+    # уровня (INFO, DEBUG и т.д.). Резервируется 8 символов. | сообщение
+    handlers=[logging.StreamHandler(sys.stdout)]  # Вывод в консоль
+)
+
+# Создаём логгер для этого файла
+# __name__ - специальная переменная, равна "conftest"
+logger = logging.getLogger(__name__)
+# =======================================================
+
+
 @pytest.fixture(scope='session')
 def api_client():
+    '''Фикстура для создания API клиента.
+    scope='session' - создаётся ОДИН РАЗ за все тесты.'''
+
+    logger.info("=" * 50)
+    logger.info("🚀 НАЧАЛО ТЕСТОВОЙ СЕССИИ")
+    logger.info("=" * 50)
+
+    # Создаём клиент
     client = APIClient()
+
+    # Аутентифицируемся
+    logger.info("🔑 Аутентификация...")
     client.auth()
-    return client
+    logger.info("✅ Аутентификация успешна")
+
+    # yield - отдаём клиент тестам
+    yield client
+
+    # Код после yield выполнится после ВСЕХ тестов
+    logger.info("=" * 50)
+    logger.info("🏁 ЗАВЕРШЕНИЕ ТЕСТОВОЙ СЕССИИ")
+    logger.info("=" * 50)
+
 
 
 @pytest.fixture
 def booking_dates():
+    '''Фикстура с датами'''
     today = datetime.today()
     checkin_date = today + timedelta(days=10)
     checkout_date = checkin_date + timedelta(days=5)
@@ -26,20 +73,23 @@ def booking_dates():
 
 @pytest.fixture()
 def generate_random_booking_data(booking_dates):
-    faker = Faker()
-    firstname = faker.first_name()
-    lastname = faker.last_name()
-    totalprice = faker.random_number(digits=3)
-    depositpaid = faker.boolean()
-    additionalneeds = faker.sentence()
+    '''Генерация случайных данных для бронирования.
+
+    Использует библиотеку Faker для создания:
+    - реальных имён и фамилий
+    - случайных цен
+    - случайных булевых значений'''
+    fake = Faker()
 
     data = {
-        'firstname': firstname,
-        'lastname': lastname,
-        'totalprice': totalprice,
-        'depositpaid': depositpaid,
+        'firstname': fake.first_name(),
+        'lastname': fake.last_name(),
+        'totalprice': fake.random_int(100, 999),
+        'depositpaid': fake.boolean(),
         'bookingdates': booking_dates,
-        'additionalneeds': additionalneeds
+        'additionalneeds': fake.sentence()
     }
 
+    # Логируем сгенерированные данные (уровень DEBUG - видно только если включили DEBUG)
+    logger.debug(f"📝 Сгенерированы тестовые данные: {data}")
     return data
