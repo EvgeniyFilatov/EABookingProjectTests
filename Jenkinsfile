@@ -9,14 +9,14 @@ pipeline {
                 sh '. venv/bin/activate'
 
                 // Установка зависимотей из requirements.txt
-                sh 'pip install -r requirements.txt'
+                sh 'pip install -r requirements.txt --break-system-packages'
             }
         }
 
         stage('Run Tests') {
             steps {
                 // Запуск тестов и генерация отчета allure
-                sh 'python -m pytest --alluredir allure-results'
+                sh 'python3 -m pytest --alluredir allure-results'
             }
         }
 
