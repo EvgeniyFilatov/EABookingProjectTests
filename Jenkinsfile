@@ -1,6 +1,20 @@
 pipeline {
     agent any
 
+    environment {
+        // Получаем credentials из Jenkins
+        PROD_BASE_URL = credentials('booker-prod-url')
+        ENVIRONMENT = credentials('test-environment')
+
+        // Для username/password - Jenkins автоматически создает две переменные
+        // с суффиксами _USR и _PSW
+        BOOKER_CREDS = credentials('booker-credentials')
+        // После этой строки доступны:
+        // BOOKER_CREDS_USR = 'admin'
+        // BOOKER_CREDS_PSW = 'password123'
+    }
+
+
     stages {
         stage('Setup Python Environment') {
             steps {
@@ -10,6 +24,29 @@ pipeline {
 
                 // Установка зависимотей из requirements.txt
                 sh 'pip install -r requirements.txt --break-system-packages'
+            }
+        }
+
+        stage('Create .env File') {
+            steps {
+                sh '''
+                    echo "=== Creating .env file from Jenkins credentials ==="
+                    . venv/bin/activate
+
+                    # Создаем .env файл с переменными
+                    cat > .env << EOF
+# Auto-generated from Jenkins credentials
+ENVIRONMENT=${ENVIRONMENT}
+PROD_BASE_URL=${PROD_BASE_URL}
+TEST_BASE_URL=https://reqres.in/
+BOOKER_USERNAME=${BOOKER_CREDS_USR}
+BOOKER_PASSWORD=${BOOKER_CREDS_PSW}
+EOF
+
+                    # Проверяем что файл создался (но не показываем содержимое!)
+                    echo ".env file created successfully"
+                    ls -la .env
+                '''
             }
         }
 
